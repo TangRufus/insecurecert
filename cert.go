@@ -1,13 +1,12 @@
 package main
 
-//package insecurecert
-
 import (
+	"crypto/x509"
 	"encoding/pem"
 	"io/ioutil"
 	"crypto/tls"
 	"log"
-	"os"
+	//"os"
 	"strconv"
 )
 
@@ -20,7 +19,7 @@ func (c Cert) addr() string {
 	return c.host + ":" + strconv.Itoa(c.port)
 }
 
-func (c Cert) der() ([]byte, error) {
+func (c Cert) der() ([]*x509.Certificate, error) {
 	conf := tls.Config{
 		InsecureSkipVerify: true,
 	}
@@ -31,31 +30,33 @@ func (c Cert) der() ([]byte, error) {
 	}
 	defer conn.Close()
 
-	der := conn.ConnectionState().PeerCertificates[0].Raw
-
-	return der, nil
+	return conn.ConnectionState().PeerCertificates, nil
 }
 
 func main() {
 
 	c := Cert{
+		//host: "untrusted-root.badssl.com",
 		host: "self-signed.badssl.com",
 		port: 443,
 	}
 
-	d, derErr := c.der()
+	certs, derErr := c.der()
 	if derErr != nil {
 		log.Fatalf("Failed to download der: %s", derErr)
 	}
 
-	ioutil.WriteFile("key.der", d, 0644)
+	var certBytes []byte
+	for _, cert := range certs {
+		certBytes = append(certBytes, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})...)
+	}
+
+	ioutil.WriteFile("self-signed.badssl.com-byte.der", certBytes, 0644)
 
 
-	certOut, err := os.Create("cert.pem")
-	if err != nil {
-		log.Fatalf("Failed to open cert.pem for writing: %s", err)
-	}
-	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: d}); err != nil {
-		log.Fatalf("Failed to write data to cert.pem: %s", err)
-	}
+	//certOut, err := os.Create("untrusted-root.pem")
+	//if err != nil {
+	//	log.Fatalf("Failed to open cert.pem for writing: %s", err)
+	//}
+
 }
