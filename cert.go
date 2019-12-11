@@ -16,16 +16,17 @@ func (c Cert) addr() string {
 	return c.host + ":" + strconv.Itoa(c.port)
 }
 
-func (c Cert) der() ([]byte, error) {
+func (c Cert) Der() ([]byte, error) {
 	conf := tls.Config{
 		InsecureSkipVerify: true,
 	}
 
 	conn, err := tls.Dial("tcp", c.addr(), &conf)
+	defer conn.Close()
+
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
 
 	return conn.ConnectionState().PeerCertificates[0].Raw, nil
 }
@@ -41,7 +42,7 @@ func main() {
 		port: 443,
 	}
 
-	certDer, derErr := c.der()
+	certDer, derErr := c.Der()
 	if derErr != nil {
 		log.Fatalf("Failed to download der: %s", derErr)
 	}
