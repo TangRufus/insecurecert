@@ -1,5 +1,1 @@
-vendor/
-dist/
-bin/
-coverage.out
-example
+insecurecert
